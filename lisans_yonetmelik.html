@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAÜ Yönetmelik Asistanı</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .chat-container {
+            height: calc(100vh - 180px);
+        }
+
+        .message-bubble {
+            max-width: 85%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background-color: #1e3a8a;
+            color: white;
+            border-radius: 18px 18px 2px 18px;
+        }
+
+        .bot-message {
+            background-color: white;
+            color: #1f2937;
+            border-radius: 18px 18px 18px 2px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background: #9ca3af;
+            display: inline-block;
+            border-radius: 50%;
+            animation: bounce 1.3s infinite both;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 py-4 px-6 flex items-center justify-between shadow-sm">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-900 p-2 rounded-lg">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold text-gray-800 leading-tight">SAÜ Asistan</h1>
+                <p class="text-xs text-green-600 flex items-center">
+                    <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span> Çevrimiçi | Yönetmelik Rehberi
+                </p>
+            </div>
+        </div>
+        <button onclick="clearChat()" class="text-gray-400 hover:text-red-500 transition-colors">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-hidden relative flex">
+        
+        <!-- Sidebar (Desktop Sadece) -->
+        <aside class="hidden md:block w-64 bg-gray-50 border-r border-gray-200 p-4">
+            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Hızlı Sorular</h2>
+            <div class="space-y-2">
+                <button onclick="quickAsk('Kayıt yenileme nasıl yapılır?')" class="w-full text-left text-sm p-2 hover:bg-white rounded border border-transparent hover:border-gray-200 transition-all">Kayıt Yenileme</button>
+                <button onclick="quickAsk('Üç ders sınavı şartları nelerdir?')" class="w-full text-left text-sm p-2 hover:bg-white rounded border border-transparent hover:border-gray-200 transition-all">Üç Ders Sınavı</button>
+                <button onclick="quickAsk('Ders geçme notları ve katsayıları nedir?')" class="w-full text-left text-sm p-2 hover:bg-white rounded border border-transparent hover:border-gray-200 transition-all">Not Sistemi</button>
+                <button onclick="quickAsk('Devamsızlık sınırı nedir?')" class="w-full text-left text-sm p-2 hover:bg-white rounded border border-transparent hover:border-gray-200 transition-all">Devam Zorunluluğu</button>
+                <button onclick="quickAsk('Mezuniyet şartları nelerdir?')" class="w-full text-left text-sm p-2 hover:bg-white rounded border border-transparent hover:border-gray-200 transition-all">Mezuniyet</button>
+            </div>
+        </aside>
+
+        <!-- Chat Area -->
+        <section class="flex-1 flex flex-col">
+            <div id="chatMessages" class="chat-container overflow-y-auto p-4 md:p-6 space-y-4">
+                <!-- Welcome Message -->
+                <div class="flex justify-start">
+                    <div class="bot-message message-bubble p-4">
+                        <p class="text-sm">Merhaba! Ben Sakarya Üniversitesi Öğrenci Yönetmeliği asistanıyım. Kayıt, sınavlar, notlar veya mezuniyet hakkında merak ettiğin her şeyi sorabilirsin. 😊</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typing Indicator (Hidden by default) -->
+            <div id="typingIndicator" class="hidden px-6 py-2">
+                <div class="typing-indicator flex space-x-1 items-center">
+                    <span class="delay-100"></span>
+                    <span class="delay-200"></span>
+                    <span class="delay-300"></span>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 bg-white border-t border-gray-200">
+                <form id="chatForm" class="flex items-center space-x-2 max-w-4xl mx-auto">
+                    <input type="text" id="userInput" placeholder="Sorunuzu buraya yazın..." 
+                        class="flex-1 py-3 px-4 bg-gray-100 border-none rounded-full focus:ring-2 focus:ring-blue-900 transition-all outline-none text-sm"
+                        autocomplete="off">
+                    <button type="submit" class="bg-blue-900 text-white p-3 rounded-full hover:bg-blue-800 transition-transform active:scale-95 shadow-md">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const chatForm = document.getElementById('chatForm');
+        const userInput = document.getElementById('userInput');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const apiKey = ""; // Environment will provide this
+
+        // Prompt with document content
+        const SYSTEM_PROMPT = `Sen Sakarya Üniversitesi (SAÜ) Ön Lisans ve Lisans Eğitim-Öğretim ve Sınav Yönetmeliği konusunda uzman bir asistansın.
+        Kullanıcılara sadece sağlanan yönetmelik metnine dayanarak doğru ve anlaşılır bilgi vermelisin.
+        
+        TEMEL BİLGİLER (Yönetmelikten özet):
+        - Kayıt Yenileme (Madde 7): Akademik takvimde belirtilen tarihlerde yapılır. Kayıt yenilemeyen pasif öğrenci olur.
+        - GNO 1.80 Altı (Madde 7/3-a): En fazla 25 AKTS ders alabilir.
+        - GNO 1.80 Üstü (Madde 7/3-b): 30+10 (veya 2 ders) AKTS alabilir.
+        - Devam Zorunluluğu (Madde 14): Teorik derslerde %70, uygulamalı derslerde %80.
+        - Başarı Notları (Madde 16): AA (4.0), BA (3.5)... DC (1.5) ve DD (1.0) şartlı geçer, FD ve FF başarısız.
+        - Üç Ders Sınavı (Madde 31): Mezuniyet için en fazla 3 dersi kalan veya GNO < 2.00 olanlara verilir. Uygulamalı dersler için verilmez.
+        - Mezuniyet (Madde 32): GNO en az 2.00 olmalı. Ön lisans 120, Lisans 240 AKTS tamamlamalı.
+        - İtiraz (Madde 19): Sınav sonuçlarına 5 iş günü içinde bölüm başkanlığına dilekçe ile yapılır.
+
+        Kurallar:
+        1. Cevaplarını her zaman nazik ve yardımcı bir dille ver.
+        2. Eğer bir bilgi yönetmelikte yoksa, "Bu konuda yönetmelikte net bir bilgi bulamadım, lütfen bölüm sekreterliğinize danışın." de.
+        3. Maddelere atıfta bulunarak cevap ver (Örn: "Yönetmeliğin 14. maddesine göre...").
+        4. Cevaplarını Türkçe ver.`;
+
+        let chatHistory = [];
+
+        async function callGemini(prompt) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: [
+                    { role: "user", parts: [{ text: `Sistem Talimatı: ${SYSTEM_PROMPT}` }] },
+                    ...chatHistory,
+                    { role: "user", parts: [{ text: prompt }] }
+                ]
+            };
+
+            let retries = 5;
+            let delay = 1000;
+
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) throw new Error('API Error');
+
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text;
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    await new Promise(res => setTimeout(res, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        function addMessage(text, isUser = false) {
+            const div = document.createElement('div');
+            div.className = `flex ${isUser ? 'justify-end' : 'justify-start animate-fade-in'}`;
+            
+            const innerDiv = document.createElement('div');
+            innerDiv.className = `message-bubble p-4 text-sm ${isUser ? 'user-message' : 'bot-message'}`;
+            
+            // Basit Markdown işlemesi
+            const formattedText = text
+                .replace(/\n/g, '<br>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            innerDiv.innerHTML = formattedText;
+            div.appendChild(innerDiv);
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Geçmişe ekle
+            chatHistory.push({
+                role: isUser ? "user" : "model",
+                parts: [{ text: text }]
+            });
+        }
+
+        async function handleSubmission(e) {
+            e?.preventDefault();
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            userInput.value = '';
+            addMessage(message, true);
+            
+            typingIndicator.classList.remove('hidden');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const response = await callGemini(message);
+                typingIndicator.classList.add('hidden');
+                addMessage(response || "Üzgünüm, bir hata oluştu.");
+            } catch (error) {
+                typingIndicator.classList.add('hidden');
+                addMessage("Bağlantı sorunu yaşandı. Lütfen daha sonra tekrar deneyin.");
+            }
+        }
+
+        function quickAsk(question) {
+            userInput.value = question;
+            handleSubmission();
+        }
+
+        function clearChat() {
+            chatMessages.innerHTML = `
+                <div class="flex justify-start">
+                    <div class="bot-message message-bubble p-4">
+                        <p class="text-sm">Sohbet temizlendi. Nasıl yardımcı olabilirim? 😊</p>
+                    </div>
+                </div>`;
+            chatHistory = [];
+        }
+
+        chatForm.addEventListener('submit', handleSubmission);
+
+        // Enter tuşu desteği (Zaten form submit ile sağlanıyor ama mobil için garanti)
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleSubmission(e);
+        });
+    </script>
+</body>
+</html>
